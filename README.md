@@ -1,111 +1,121 @@
 # EXP 3 : IIR-CHEBYSHEV-FITER-DESIGN
 
-# AIM: 
-To design an IIR Chebyshev filter  using SCILAB. 
+## AIM: 
 
-# APPARATUS REQUIRED: 
+ To design an IIR Chebyshev filter  using SCILAB. 
+
+## APPARATUS REQUIRED: 
 PC installed with SCILAB. 
 
-# PROGRAM (LPF): 
+## PROGRAM (LPF): 
+```
+clc ;
+close ;
+wp=input('Enter the pass band frequency (Radians )= ' );
+ws=input('Enter the stop band frequency (Radians )= ' );
+alphap=input( ' Enter the pass band attenuation (dB)=' );
+alphas=input( ' Enter the stop band attenuation(dB)=' );
+T=input('Enter the Value of sampling Time=');
+omegap=(2/T)*tan(wp/2);
+disp(omegap,'omegap=');
+omegas=(2/T)*tan(ws/2);
+N=acosh(sqrt(((10^(0.1*alphas))-1)/((10^(0.1*alphap))-1)))/(acosh(omegas/omegap));
+disp(N,'N=');
+N=ceil(N);
+disp(N,'Round off value of N=');
+omegac=omegap/(((10^(0.1*alphap)) -1)^(1/(2* N)));
+disp(omegac,'omegac=');
+Epsilon = sqrt ((10^(0.1*alphap))-1);
+disp(Epsilon,'Epsilon=');
+[pols ,gn] = zpch1(N, Epsilon,omegap );
+disp(gn,'Gain');
+disp(pols,'Poles');
+hs=poly(gn,'s','coeff')/real(poly(pols,'s'));
+disp(hs,'Analog Low pass Chebyshev Filter Transfer function');
+z=poly(0,'z');
+Hz=horner(hs,(2/ T)*((z -1)/(z+1)));
+disp(Hz,'Digital LPF Transfer function H(Z)=');
+HW=frmag(Hz,512); 
+w=0:%pi/511:%pi;
+plot(w/%pi,abs(HW));
+xlabel(' Normalized Digital Frequency w');
+ylabel('Magnitude ');
+title(' Frequency Response of Chebyshev IIR LPF');
+
+```
+
+
+## PROGRAM (HPF): 
 ```
 clc;
 clear;
+close;
 
-// ------------------------------
-// Filter specifications
-// ------------------------------
-Fs = 5000;       // Sampling frequency (Hz)
-fc = 1500;       // Cutoff frequency (Hz)
-n  = 4;          // Filter order
-Rp = 1;          // Passband ripple (dB)
+// Input parameters
+wp = input('Enter the pass band frequency (Radians) = ');
+ws = input('Enter the stop band frequency (Radians) = ');
+alphap = input('Enter the pass band attenuation (dB) = ');
+alphas = input('Enter the stop band attenuation (dB) = ');
+T = input('Enter the sampling time = ');
 
-// ------------------------------
-// Normalized cutoff (0–1) for manual coefficients
-Wn = fc / Fs;
+// Prewarp the digital frequencies
+omegap = (2/T)*tan(wp/2);
+disp(omegap, 'omegap=');
+omegas = (2/T)*tan(ws/2);
 
-// ------------------------------
-// Digital Chebyshev Type I coefficients (pre-computed for n=4, Rp=1dB)
-b = [0.0976  0.3904  0.5856  0.3904  0.0976];  // numerator
-a = [1.0000 -0.5772  0.4218 -0.0562  0.0097];  // denominator
+// Filter order calculation using Chebyshev formula
+N = acosh(sqrt(((10^(0.1*alphas))-1)/((10^(0.1*alphap))-1))) / acosh(omegas/omegap);
+disp(N, 'N=');
+N = ceil(N);
+disp(N, 'Round off value of N=');
 
-// ------------------------------
+// Cutoff frequency
+omegac = omegap / (((10^(0.1*alphap)) - 1)^(1/(2*N)));
+disp(omegac, 'omegac=');
+
+Epsilon = sqrt((10^(0.1*alphap)) - 1);
+disp(Epsilon, 'Epsilon=');
+
+// Get poles and gain for Chebyshev Type I lowpass prototype
+[pols, gn] = zpch1(N, Epsilon, omegap);
+disp(gn, 'Gain');
+disp(pols, 'Poles');
+
+// Analog lowpass transfer function
+hs_lp = poly(gn, 's', 'coeff') / real(poly(pols, 's'));
+disp(hs_lp, 'Analog Low pass Chebyshev Filter Transfer function');
+
+// Frequency transform from lowpass to highpass: s -> omegac / s
+s = poly(0, 's');
+hs_hp = horner(hs_lp, omegac ./ s);
+disp(hs_hp, 'Analog High pass Chebyshev Filter Transfer function');
+
+// Bilinear transform to convert to digital filter
+z = poly(0, 'z');
+Hz = horner(hs_hp, (2 / T) * ((z - 1) / (z + 1)));
+disp(Hz, 'Digital HPF Transfer function H(Z)=');
+
 // Frequency response
-N = 512;
-[H, f_norm] = frmag(b, a, N);
-f = f_norm * Fs;
+HW = frmag(Hz, 512);
+w = 0 : %pi / 511 : %pi;
+plot(w / %pi, abs(HW));
+xlabel('Normalized Digital Frequency w');
+ylabel('Magnitude');
+title('Frequency Response of Chebyshev IIR Highpass Filter');
 
-// ------------------------------
-// Plot magnitude response
-figure(1);
-plot(f, 20*log10(H + %eps));
-xlabel("Frequency (Hz)");
-ylabel("Magnitude (dB)");
-title("Chebyshev Type I Low-Pass Filter (Order 4, Rp=1dB)");
-xgrid();
-
-// ------------------------------
-// Plot phase response
-phase = atan2(imag(H), real(H)) * 180 / %pi;
-figure(2);
-plot(f, phase);
-xlabel("Frequency (Hz)");
-ylabel("Phase (degrees)");
-title("Phase Response of Chebyshev Type I LPF");
-xgrid();
 ```
 
-# PROGRAM (HPF): 
-```
-clc;
-clear;
 
-// ------------------------------
-// Filter specifications
-// ------------------------------
-Fs = 5000;       // Sampling frequency (Hz)
-fc = 1500;       // Cutoff frequency (Hz)
-n  = 2;          // Filter order
-Rp = 1;          // Passband ripple (dB)
+## OUTPUT (LPF) : 
 
-// ------------------------------
-// Normalized cutoff frequency
-Wn = fc / Fs;    // Must be 0 < Wn < 0.5
+<img width="1920" height="1080" alt="Screenshot 2025-09-22 152037" src="https://github.com/user-attachments/assets/8410d3fc-ecb2-4956-a7e2-9ed965cb2cc3" />
 
-// ------------------------------
-// Precomputed Chebyshev Type I HPF coefficients (order 2, Rp=1dB)
-b = [0.5856 -1.1712 0.5856];  // Numerator
-a = [1.0000 -0.5772 0.4218];  // Denominator
 
-// ------------------------------
-// Frequency response
-N = 512;
-[H, f_norm] = frmag(b, a, N);
-f = f_norm * Fs;
+## OUTPUT (HPF) : 
 
-// ------------------------------
-// Plot magnitude response
-figure(1);
-plot(f, 20*log10(H + %eps));
-xlabel("Frequency (Hz)");
-ylabel("Magnitude (dB)");
-title("Chebyshev Type I High-Pass Filter (Order 2, Rp=1dB)");
-xgrid();
+<img width="1920" height="1080" alt="Screenshot 2025-09-22 174500" src="https://github.com/user-attachments/assets/2d24cd93-336f-4ca8-9f50-1b2260827aae" />
 
-// ------------------------------
-// Plot phase response
-phase = atan2(imag(H), real(H)) * 180 / %pi;
-figure(2);
-plot(f, phase);
-xlabel("Frequency (Hz)");
-ylabel("Phase (degrees)");
-title("Phase Response of Chebyshev Type I HPF (Order 2)");
-xgrid();
-```
-# OUTPUT (LPF) : 
-<img width="762" height="596" alt="image" src="https://github.com/user-attachments/assets/29909be6-0b48-44f3-ac78-09722d415f7b" />
 
-# OUTPUT (HPF) : 
-<img width="761" height="598" alt="image" src="https://github.com/user-attachments/assets/7f94db4b-11e9-4984-a5f0-cde60bd53026" />
+## RESULT: 
 
-# RESULT: 
-IIR Chebyshev filter  using SCILAB was designed.
+The design of an IIR Chebyshev filter  using SCILAB is sucessfully completed. 
